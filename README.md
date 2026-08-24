@@ -2,7 +2,9 @@
 
 AWS profile switcher, kubectx-style. Run `aps` with no arguments to
 fuzzy-pick a profile from `~/.aws/config` / `~/.aws/credentials`, or
-`aps <profile>` to jump straight to one.
+`aps <profile>` to jump straight to one. Like the AWS CLI itself, aps
+honors `AWS_CONFIG_FILE` / `AWS_SHARED_CREDENTIALS_FILE` if you keep
+these files elsewhere (e.g. `~/.config/aws`).
 
 A plain binary can't change its parent shell's environment, so `aps`
 follows the [zoxide](https://github.com/ajeetdsouza/zoxide) pattern: the
