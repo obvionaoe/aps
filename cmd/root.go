@@ -40,6 +40,13 @@ output.`,
 		if err != nil {
 			return err
 		}
+		if len(profiles) == 0 {
+			configPath, credentialsPath, err := awsprofile.Paths()
+			if err != nil {
+				return err
+			}
+			return fmt.Errorf("no AWS profiles found in %s or %s", configPath, credentialsPath)
+		}
 
 		if len(args) == 1 {
 			name := args[0]

@@ -14,19 +14,21 @@ import (
 
 var sectionRe = regexp.MustCompile(`^\[(.+)\]\s*$`)
 
-// List returns the sorted, deduplicated set of profile names found in
-// ~/.aws/config and ~/.aws/credentials. Missing files are ignored.
+// List returns the sorted, deduplicated set of profile names found in the
+// AWS config and credentials files. Locations follow the AWS CLI's own
+// resolution: the AWS_CONFIG_FILE and AWS_SHARED_CREDENTIALS_FILE
+// environment variables take precedence (this is how setups that keep
+// these files under ~/.config/aws instead of ~/.aws point aps at them),
+// falling back to ~/.aws/config and ~/.aws/credentials. Missing files are
+// ignored.
 func List() ([]string, error) {
-	home, err := os.UserHomeDir()
+	configPath, credentialsPath, err := Paths()
 	if err != nil {
-		return nil, fmt.Errorf("resolving home directory: %w", err)
+		return nil, err
 	}
 
 	seen := map[string]struct{}{}
-	for _, path := range []string{
-		filepath.Join(home, ".aws", "config"),
-		filepath.Join(home, ".aws", "credentials"),
-	} {
+	for _, path := range []string{configPath, credentialsPath} {
 		names, err := parseFile(path)
 		if err != nil {
 			continue
@@ -42,6 +44,26 @@ func List() ([]string, error) {
 	}
 	sort.Strings(profiles)
 	return profiles, nil
+}
+
+// Paths returns the config and credentials file paths aps reads profiles
+// from, honoring AWS_CONFIG_FILE / AWS_SHARED_CREDENTIALS_FILE the same way
+// List does.
+func Paths() (configPath, credentialsPath string, err error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", "", fmt.Errorf("resolving home directory: %w", err)
+	}
+
+	configPath = os.Getenv("AWS_CONFIG_FILE")
+	if configPath == "" {
+		configPath = filepath.Join(home, ".aws", "config")
+	}
+	credentialsPath = os.Getenv("AWS_SHARED_CREDENTIALS_FILE")
+	if credentialsPath == "" {
+		credentialsPath = filepath.Join(home, ".aws", "credentials")
+	}
+	return configPath, credentialsPath, nil
 }
 
 // Exists reports whether name is a known profile.

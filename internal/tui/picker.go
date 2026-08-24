@@ -13,7 +13,7 @@ import (
 // ctrl-c).
 func Pick(profiles []string, current string) (string, error) {
 	if len(profiles) == 0 {
-		return "", fmt.Errorf("no AWS profiles found in ~/.aws/config or ~/.aws/credentials")
+		return "", fmt.Errorf("no AWS profiles found")
 	}
 
 	options := make([]huh.Option[string], 0, len(profiles))
