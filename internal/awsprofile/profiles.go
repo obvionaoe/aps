@@ -28,8 +28,15 @@ func List() ([]string, error) {
 	}
 
 	seen := map[string]struct{}{}
-	for _, path := range []string{configPath, credentialsPath} {
-		names, err := parseFile(path)
+	files := []struct {
+		path     string
+		isConfig bool
+	}{
+		{configPath, true},
+		{credentialsPath, false},
+	}
+	for _, f := range files {
+		names, err := parseFile(f.path, f.isConfig)
 		if err != nil {
 			continue
 		}
@@ -80,7 +87,7 @@ func Exists(name string) (bool, error) {
 	return false, nil
 }
 
-func parseFile(path string) ([]string, error) {
+func parseFile(path string, isConfig bool) ([]string, error) {
 	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
@@ -95,12 +102,30 @@ func parseFile(path string) ([]string, error) {
 		if m == nil {
 			continue
 		}
-		// ~/.aws/config prefixes non-default profile sections with
-		// "profile "; ~/.aws/credentials does not.
-		name := strings.TrimSpace(strings.TrimPrefix(m[1], "profile "))
+		name := profileName(strings.TrimSpace(m[1]), isConfig)
 		if name != "" {
 			names = append(names, name)
 		}
 	}
 	return names, scanner.Err()
+}
+
+// profileName returns the profile name for a section header's contents, or
+// an empty string if the section isn't a profile.
+//
+// In ~/.aws/config, profile sections are "[default]" or "[profile name]";
+// other section types ("[sso-session x]", "[services x]", ...) are not
+// profiles and are ignored. In ~/.aws/credentials every section is a
+// profile and section names carry no prefix.
+func profileName(section string, isConfig bool) string {
+	if !isConfig {
+		return section
+	}
+	if section == "default" {
+		return "default"
+	}
+	if rest, ok := strings.CutPrefix(section, "profile "); ok {
+		return strings.TrimSpace(rest)
+	}
+	return ""
 }
